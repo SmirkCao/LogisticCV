@@ -11,11 +11,8 @@ def test_location():
     filename = "./Input/TN193_20170531174126717_01_0000031302_NB_------------.jpg"
 
     lc = Location()
-    lc.read_image(filename_=filename)
-    lc.set_roi()
-    lc.get_roi_image()
-    lc.process_image()
-    lc.write_image()
+    lc.set_roi(start_n=500, start_m=1400, end_n=3800, end_m=6700)
+    lc.process_image(filename)
 
 
 if __name__ == '__main__':
