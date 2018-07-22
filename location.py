@@ -7,6 +7,7 @@ import cv2 as cv
 import numpy as np
 import warnings
 import logging
+import os
 
 
 class Location(object):
@@ -14,22 +15,24 @@ class Location(object):
         self.image = None
         self.bouding_rect_ = None
         self.output_prefix_ = "out"
+        self.output_dir = "./Output/"
+        self.input_dir = "./Input/"
 
     def set_roi(self,
-                start_n=0,
-                start_m=0,
-                end_n=0,
-                end_m=0):
-        self.start_n_ = start_n
-        self.start_m_ = start_m
-        self.end_n_ = end_n
-        self.end_m_ = end_m
+                start_x=0,
+                start_y=0,
+                end_x=0,
+                end_y=0):
+        self.start_x_ = start_x
+        self.start_y_ = start_y
+        self.end_x_ = end_x
+        self.end_y_ = end_y
         self.loc_ = None
 
     def get_roi_image(self):
-        if self.start_n_+self.end_n_+self.start_m_+self.end_m_ == 0:
+        if self.start_x_+self.end_x_+self.start_y_+self.end_y_ == 0:
             return self.image
-        return self.image[self.start_n_:self.end_n_, self.start_m_:self.end_m_].copy()
+        return self.image[self.start_x_:self.end_x_, self.start_y_:self.end_y_].copy()
 
     def read_image(self,
                    filename_=None):
@@ -40,7 +43,8 @@ class Location(object):
 
     def process_image(self,
                       filename_):
-        self.read_image(filename_=filename_)
+
+        self.read_image(filename_= self.input_dir + filename_)
         roi_ = self.get_roi_image()
         gray = cv.cvtColor(roi_, cv.COLOR_BGR2GRAY)
         # todo: dynamic threshold
@@ -59,18 +63,18 @@ class Location(object):
 
         # based on roi_
         box = np.int0(cv.boxPoints(rect))
-        box[:, 0] += self.start_m_
-        box[:, 1] += self.start_n_
+        box[:, 0] += self.start_y_
+        box[:, 1] += self.start_x_
 
         # based on image
         self.loc_ = box
-        lc.draw_border()
-        lc.put_desc()
-        lc.write_image(filename_=filename_)
+        self.draw_border()
+        self.put_desc()
+        self.write_image(filename_=filename_)
 
     def write_image(self,
                     filename_="output.jpg"):
-        cv.imwrite(filename_, self.image)
+        cv.imwrite(self.output_dir + filename_, self.image)
 
     def get_location(self):
         if self.loc_ is None:
@@ -104,13 +108,13 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     logging.basicConfig(level=logging.DEBUG)
 
-    files = ["./Input/TN193_20170531174126717_01_0000031302_NB_------------.jpg",
-             "./Input/TN097_20170531173944456_01_0000031260_NB_------------.jpg"]
-
     lc = Location()
-    lc.set_roi(start_n=500, start_m=1400, end_n=3800, end_m=6700)
-    for filename in files:
-        logging.debug(filename)
-        lc.process_image(filename)
+    walk_dir = os.walk(lc.input_dir)
+    lc.set_roi(start_x=500, start_y=1400, end_x=3800, end_y=6700)
+    # (root, dirs, files)
+    for _, _, files in walk_dir:
+        for filename in files:
+            logging.debug(filename)
+            lc.process_image(filename)
 
 
