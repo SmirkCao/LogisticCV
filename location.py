@@ -2,7 +2,7 @@
 # Project:  LogisticCV
 # Filename: location
 # Date: 7/20/18
-# Author: Smirk <smirk dot cao at gmail dot com>
+# Author: 😏 <smirk dot cao at gmail dot com>
 import cv2 as cv
 import numpy as np
 import warnings
@@ -17,6 +17,10 @@ class Location(object):
         self.output_prefix_ = "out"
         self.output_dir = "./Output/"
         self.input_dir = "./Input/"
+        self.BLUE = (255, 0, 0)
+        self.YELLOW = (0, 255, 255)
+        self.GREEN = (0, 255, 0)
+        self.RED = (0, 0, 255)
 
     def set_roi(self,
                 start_x=0,
@@ -48,7 +52,7 @@ class Location(object):
         roi_ = self.get_roi_image()
         gray = cv.cvtColor(roi_, cv.COLOR_BGR2GRAY)
         # todo: dynamic threshold
-        (_, thresh) = cv.threshold(gray, 50, 255, cv.THRESH_BINARY)
+        (_, thresh) = cv.threshold(gray, 75, 255, cv.THRESH_BINARY)
         #
         kernel = cv.getStructuringElement(cv.MORPH_RECT, (60, 60))
         closed = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
@@ -69,8 +73,9 @@ class Location(object):
         # based on image
         self.loc_ = box
         self.draw_border()
-        self.put_desc()
+        offset_ = self.put_desc()
         self.write_image(filename_=filename_)
+        return offset_
 
     def write_image(self,
                     filename_="output.jpg"):
@@ -84,29 +89,52 @@ class Location(object):
 
     def draw_border(self):
         r_ = 150
-        green_ = (0, 255, 0)
-        blue_ = (255, 0, 0)
-        red_ = (0, 0, 255)
-        yellow_ = (0, 255, 255)
         box_ = self.loc_
-        cv.drawContours(self.image, [box_], -1, green_, 20, cv.LINE_4)
+        cv.drawContours(self.image, [box_], -1, self.GREEN, 20, cv.LINE_4)
         # corner
-        cv.circle(self.image, tuple(self.loc_[0]), r_, red_, cv.LINE_4)
-        cv.circle(self.image, tuple(self.loc_[1]), r_, red_, cv.LINE_4)
-        cv.circle(self.image, tuple(self.loc_[2]), r_, red_, cv.LINE_4)
-        cv.circle(self.image, tuple(self.loc_[3]), r_, yellow_, cv.LINE_4)
+        cv.circle(self.image, tuple(self.loc_[0]), r_, self.RED, cv.LINE_4)
+        cv.circle(self.image, tuple(self.loc_[1]), r_, self.RED, cv.LINE_4)
+        cv.circle(self.image, tuple(self.loc_[2]), r_, self.RED, cv.LINE_4)
+        cv.circle(self.image, tuple(self.loc_[3]), r_, self.YELLOW, cv.LINE_4)
 
     def put_desc(self):
         font = cv.FONT_HERSHEY_SIMPLEX
-        green_ = (0, 255, 0)
 
         for idx_, loc_ in enumerate(self.loc_):
-            cv.putText(self.image, str(idx_)+"-"+str(tuple(loc_)), tuple(loc_), font, 5, green_, 10)
+            cv.putText(self.image, str(idx_)+"-"+str(tuple(loc_)), tuple(loc_), font, 5, self.GREEN, 10)
+        # parcel center
+        # print(self.loc_[:, 0])
+        center_x_ = (max(self.loc_[:, 0]) + min(self.loc_[:, 0]))//2
+        center_y_ = (max(self.loc_[:, 1]) + min(self.loc_[:, 1]))//2
+        center_ = np.array([center_x_, center_y_])
+        cv.putText(self.image, "X", tuple(center_), font, 5, self.GREEN, 10)  # bottom-left corner
+        # ROI center
+        tmp_ = np.array([(self.start_y_ + self.end_y_) // 2, (self.start_x_ + self.end_x_) // 2])
+        cv.putText(self.image, "o", tuple(tmp_), font, 5, self.BLUE, 10)  # bottom-left corner
+
+        # adjust info
+        # cv.putText(self.image, "center" + str(center_), center_, font, 5, green_, 10) # bottom-left corner
+        offset_ = tmp_ - center_
+        # x
+        arrow_start_ = [center_[0], center_[1]+500]
+        arrow_end_ = [center_[0] + np.sign(offset_[0])*200, center_[1]+500]
+        cv.arrowedLine(self.image, tuple(arrow_start_),  tuple(arrow_end_), self.YELLOW, 20, tipLength=0.5)
+        cv.putText(self.image, str(offset_[0]), tuple(arrow_end_), font, 5, self.YELLOW, 10)
+
+        # y
+        arrow_start_ = [center_[0], center_[1]+500]
+        arrow_end_ = [center_[0], center_[1] + 500 + np.sign(offset_[1]) * 200]
+        cv.arrowedLine(self.image, tuple(arrow_start_), tuple(arrow_end_), self.YELLOW, 20, tipLength=0.5)
+        cv.putText(self.image, str(offset_[1]), tuple(arrow_end_), font, 5, self.YELLOW, 10)
+        return offset_
 
 
 if __name__ == '__main__':
     warnings.filterwarnings("ignore")
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s  %(filename)s : %(levelname)s  %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        )
 
     lc = Location()
     walk_dir = os.walk(lc.input_dir)
@@ -114,7 +142,6 @@ if __name__ == '__main__':
     # (root, dirs, files)
     for _, _, files in walk_dir:
         for filename in files:
-            logging.debug(filename)
-            lc.process_image(filename)
-
-
+            logging.info(filename)
+            offset = lc.process_image(filename)
+            logging.info("offset " + str(offset))
