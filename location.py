@@ -7,7 +7,7 @@ import cv2 as cv
 import numpy as np
 import warnings
 import logging
-import os
+import glob
 
 
 class Location(object):
@@ -46,13 +46,16 @@ class Location(object):
         return self.image
 
     def process_image(self,
-                      filename_):
-
-        self.read_image(filename_= self.input_dir + filename_)
+                      image_):
+        self.image = image_
+        # roi_
         roi_ = self.get_roi_image()
         gray = cv.cvtColor(roi_, cv.COLOR_BGR2GRAY)
         # todo: dynamic threshold
+        # constant
         (_, thresh) = cv.threshold(gray, 75, 255, cv.THRESH_BINARY)
+        # OTSU not recommend for this application
+        # (_, thresh) = cv.threshold(gray, 75, 255, cv.THRESH_OTSU)
         #
         kernel = cv.getStructuringElement(cv.MORPH_RECT, (60, 60))
         closed = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
@@ -72,14 +75,14 @@ class Location(object):
 
         # based on image
         self.loc_ = box
-        self.draw_border()
-        offset_ = self.put_desc()
-        self.write_image(filename_=filename_)
-        return offset_
+        x_start, x_end, y_start, y_end = min(box[:, 1]), max(box[:, 1]), min(box[:, 0]), max(box[:, 0])
+
+        return (image_[x_start:x_end, y_start:y_end]).copy()
 
     def write_image(self,
                     filename_="output.jpg"):
-        cv.imwrite(self.output_dir + filename_, self.image)
+        logging.info(filename_)
+        cv.imwrite(filename_, self.image)
 
     def get_location(self):
         if self.loc_ is None:
@@ -137,11 +140,12 @@ if __name__ == '__main__':
                         )
 
     lc = Location()
-    walk_dir = os.walk(lc.input_dir)
     lc.set_roi(start_x=500, start_y=1400, end_x=3800, end_y=6700)
-    # (root, dirs, files)
-    for _, _, files in walk_dir:
-        for filename in files:
-            logging.info(filename)
-            offset = lc.process_image(filename)
-            logging.info("offset " + str(offset))
+    for filename in glob.iglob(lc.input_dir + "*.jpg"):
+        logging.info(filename)
+        image = lc.read_image(filename_=filename)
+        lc.process_image(image)
+        lc.draw_border()
+        offset = lc.put_desc()
+        lc.write_image(filename_=filename.replace(lc.input_dir, lc.output_dir))
+        logging.info("offset " + str(offset))
