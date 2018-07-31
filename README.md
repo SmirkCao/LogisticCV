@@ -1,7 +1,7 @@
 # LogisticCV
 ## 1. Location
 
-![location](assets/location.jpg)
+![location](assets/location.png)
 
 ## 2. Registration
 
