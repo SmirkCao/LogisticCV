@@ -56,7 +56,7 @@ class Location(object):
         (_, thresh) = cv.threshold(gray, 75, 255, cv.THRESH_BINARY)
         # OTSU not recommend for this application
         # (_, thresh) = cv.threshold(gray, 75, 255, cv.THRESH_OTSU)
-        #
+        # 得到侵蚀或者膨胀的模板
         kernel = cv.getStructuringElement(cv.MORPH_RECT, (60, 60))
         closed = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
         closed = cv.erode(closed, None, iterations=2)
