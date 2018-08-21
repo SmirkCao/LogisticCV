@@ -48,7 +48,7 @@ class VideoProcessor(object):
         while True:
             bbox = cv2.selectROI('MultiTracker', self.frame)
             bboxes.append(bbox)
-            colors.append((randint(0, 255), randint(0, 255), randint(0, 255)))
+            colors.append((0, 255, 255))
             print("Press q to quit selecting boxes and start tracking")
             print("Press any other key to select next object")
             k = cv2.waitKey(0) & 0xFF
@@ -68,7 +68,7 @@ class VideoProcessor(object):
 
     def process_video(self):
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        video_writer = cv2.VideoWriter('demo.avi', fourcc, self.fps, (self.roi[2], self.roi[3]))
+        video_writer = cv2.VideoWriter('dropout.avi', fourcc, self.fps, (self.roi[2], self.roi[3]))
         for idx in range(int(self.start*self.fps), int(self.end*self.fps)):
             print(idx)
             success_, frame_ = self.cap.read()
@@ -80,6 +80,10 @@ class VideoProcessor(object):
                 p1 = (int(newbox[0]), int(newbox[1]))
                 p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
                 cv2.rectangle(frame_, p1, p2, self.colors[i], 2, 1)
+                # add label
+                cv2.putText(frame_, "pacel_%d" % i,
+                            (int(newbox[0]), int(newbox[1])-5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
             video_writer.write(self.cropped_img(frame_, self.roi))
         video_writer.release()
 
@@ -89,7 +93,7 @@ class VideoProcessor(object):
 
 
 if __name__ == '__main__':
-    vp = VideoProcessor(path_="./Input/object_tracking/demo.mp4", start_=31, end_=35)
+    vp = VideoProcessor(path_="./Input/object_tracking/dropout.mp4", start_=29, end_=33)
     vp.load_video()
     vp.select_roi()
     vp.select_object()
