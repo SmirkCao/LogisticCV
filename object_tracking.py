@@ -5,6 +5,7 @@
 # Author: 😏 <smirk dot cao at gmail dot com>
 import cv2
 from random import randint
+import argparse
 
 
 class VideoProcessor(object):
@@ -81,9 +82,11 @@ class VideoProcessor(object):
                 p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
                 cv2.rectangle(frame_, p1, p2, self.colors[i], 2, 1)
                 # add label
-                cv2.putText(frame_, "pacel_%d" % i,
+                cv2.putText(frame_, "ID%d" % i,
                             (int(newbox[0]), int(newbox[1])-5),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
+            cv2.putText(frame_, "%d" % len(boxes), (self.roi[0]+15, self.roi[1]+15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), thickness=2)
             video_writer.write(self.cropped_img(frame_, self.roi))
         video_writer.release()
 
@@ -93,7 +96,13 @@ class VideoProcessor(object):
 
 
 if __name__ == '__main__':
-    vp = VideoProcessor(path_="./Input/object_tracking/dropout.mp4", start_=29, end_=33)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--input", type=str, help="path to optional input video file")
+    args = vars(ap.parse_args())
+    if not args.get("input", False):
+        vp = VideoProcessor(path_="./Input/object_tracking/dropout.mp4", start_=29, end_=33)
+    else:
+        vp = VideoProcessor(path_=args["input"], start_=29, end_=33)
     vp.load_video()
     vp.select_roi()
     vp.select_object()
