@@ -3,11 +3,15 @@
 # Filename: centroid_tracker
 # Date: 8/23/18
 # Author: 😏 <smirk dot cao at gmail dot com>
+# refs
+# 1. [Face detection with OpenCV and deep learning](https://www.pyimagesearch.com/2018/02/26/face-detection-with-opencv-and-deep-learning/)
+
 from collections import OrderedDict
 from scipy.spatial import distance as dist
 import numpy as np
 import cv2
 import logging
+import imutils
 
 
 class CentroidTracker(object):
@@ -93,26 +97,56 @@ if __name__ == '__main__':
 
     np.random.seed(42)
     ct = CentroidTracker()
-    face_cascade = cv2.CascadeClassifier('./Input/face_detector/haarcascade_frontalface_default.xml')
+    net = cv2.dnn.readNetFromCaffe("./Input/face_detector/deploy.prototxt.txt",
+                                   "./Input/face_detector/res10_300x300_ssd_iter_140000.caffemodel")
     cap = cv2.VideoCapture(0)
     while True:
         # get a frame
         _, frame = cap.read()
-        faces = face_cascade.detectMultiScale(frame)
-        rects = []
-        for (x, y, w, h) in faces:
-            rects.append((x, y, x+w, y+h))
+        logger.info("read camera")
+        frame = imutils.resize(frame, width=400)
+
+        # grab the frame dimensions and convert it to a blob
+        (h, w) = frame.shape[:2]
+        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
+        # 1. Mean subtraction
+        # 2. Scaling
+        # 3. And optionally channel swapping
+        # show blob for understanding
+        cv2.imshow("blob", np.transpose(blob[0], (1, 2, 0)))
+        # pass the blob through the network and obtain the detections and
+        # predictions
+        net.setInput(blob)
+        logger.info("detection")
+        detections = net.forward()
+        # loop over the detections
+        for i in range(0, detections.shape[2]):
+            # extract the confidence (i.e., probability) associated with the
+            # prediction
+            confidence = detections[0, 0, i, 2]
+
+            # filter out weak detections by ensuring the `confidence` is
+            # greater than the minimum confidence
+            if confidence < 0.5:
+                continue
+
+            # compute the (x, y)-coordinates of the bounding box for the
+            logger.info(detections)
+            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+            (startX, startY, endX, endY) = box.astype("int")
+
+            # draw the bounding box of the face along with the associated
+            # probability
+            text = "{:.2f}%".format(confidence * 100)
+            y = startY - 10 if startY - 10 > 10 else startY + 10
+            cv2.rectangle(frame, (startX, startY), (endX, endY),
+                          (0, 0, 255), 2)
+            cv2.putText(frame, text, (startX, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+
+        cv2.imshow("capture", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
-        face_objs = ct.update(rects)
-        for (idx, rect) in zip(face_objs.keys(), rects):
-            logger.info("%d, %s" % (idx, face_objs))
-            cv2.rectangle(frame, rect[:2], rect[2:], (0, 255, 255))
-            cv2.circle(frame, tuple(face_objs[idx]), 10, (0, 255, 255))
-            cv2.putText(frame, "ID%d" % idx, tuple(x-25 for x in tuple(face_objs[idx])),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        cv2.imshow("capture", frame)
 
     logger.info(cap.get(cv2.CAP_PROP_FPS))
     logger.info("width %d, heigh %d" % (cap.get(cv2.CAP_PROP_FRAME_WIDTH), cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
