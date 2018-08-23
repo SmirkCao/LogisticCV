@@ -4,7 +4,6 @@
 # Date: 8/19/18
 # Author: 😏 <smirk dot cao at gmail dot com>
 import cv2
-from random import randint
 import argparse
 
 
