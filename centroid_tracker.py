@@ -5,8 +5,9 @@
 # Author: 😏 <smirk dot cao at gmail dot com>
 from collections import OrderedDict
 from scipy.spatial import distance as dist
-import cv2
 import numpy as np
+import cv2
+import logging
 
 
 class CentroidTracker(object):
@@ -87,6 +88,9 @@ class CentroidTracker(object):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger("tracker")
+
     np.random.seed(42)
     ct = CentroidTracker()
     face_cascade = cv2.CascadeClassifier('./Input/face_detector/haarcascade_frontalface_default.xml')
@@ -103,13 +107,14 @@ if __name__ == '__main__':
 
         face_objs = ct.update(rects)
         for (idx, rect) in zip(face_objs.keys(), rects):
-            print(idx, face_objs)
+            logger.info("%d, %s" % (idx, face_objs))
             cv2.rectangle(frame, rect[:2], rect[2:], (0, 255, 255))
             cv2.circle(frame, tuple(face_objs[idx]), 10, (0, 255, 255))
             cv2.putText(frame, "ID%d" % idx, tuple(x-25 for x in tuple(face_objs[idx])),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         cv2.imshow("capture", frame)
 
-        print(face_objs)
+    logger.info(cap.get(cv2.CAP_PROP_FPS))
+    logger.info("width %d, heigh %d" % (cap.get(cv2.CAP_PROP_FRAME_WIDTH), cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
     cap.release()
     cv2.destroyAllWindows()
